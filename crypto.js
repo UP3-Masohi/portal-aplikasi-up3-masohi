@@ -1,7 +1,11 @@
 // crypto.js — pengunci data portal.
 // Daftar aplikasi disimpan terenkripsi (AES-256-GCM) di data.enc.js.
-// Kuncinya diturunkan dari kode akses dengan PBKDF2-SHA256, jadi tanpa
-// kode akses isinya tidak bisa dibaca sekalipun file-nya diunduh.
+// Ada dua kode akses dengan peran berbeda:
+//   • kode LIHAT  — membuka portal (hanya melihat daftar aplikasi)
+//   • kode KELOLA — membuka portal dan admin.html (mengubah/menghapus data)
+// Data dienkripsi dengan kunci acak; kunci acak itu dibungkus dua kali, masing-masing
+// dengan kunci turunan (PBKDF2-SHA256) dari kode lihat dan kode kelola. Dengan begitu
+// satu file melayani kedua kode, dan kode kelola tidak pernah tersimpan di mana pun.
 // Tidak ada yang perlu diubah di file ini.
 
 window.PortalCrypto = (() => {
@@ -10,6 +14,8 @@ window.PortalCrypto = (() => {
   const dec = new TextDecoder();
   const ITER = 300000;
   const STORE = 'portal-kunci';
+  const STORE_ROLE = 'portal-peran';
+  const ROLES = ['kelola', 'lihat'];   // urutan percobaan: kelola dulu
 
   function toB64(buf) {
     const u = new Uint8Array(buf);
@@ -20,21 +26,46 @@ window.PortalCrypto = (() => {
   function fromB64(s) {
     return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
   }
+  function rand(n) { return crypto.getRandomValues(new Uint8Array(n)); }
 
+  // Kunci turunan dari kode akses (dipakai untuk membungkus kunci data)
   async function deriveKey(pass, salt, iter) {
     const base = await crypto.subtle.importKey('raw', enc.encode(String(pass).normalize('NFKC')), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' },
       base, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
   }
+  async function importRaw(raw) {
+    return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+  }
+  async function wrap(kek, dataKey) {
+    const iv = rand(12);
+    const raw = await crypto.subtle.exportKey('raw', dataKey);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, raw);
+    return { iv: toB64(iv), ct: toB64(ct) };
+  }
+  async function unwrap(kek, w) {
+    const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(w.iv) }, kek, fromB64(w.ct));
+    return importRaw(raw);
+  }
 
-  // Enkripsi objek JSON dengan kode akses -> paket {v, iter, salt, iv, ct}
-  async function encrypt(pass, obj) {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const key = await deriveKey(pass, salt, ITER);
-    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
-    return { v: 1, iter: ITER, salt: toB64(salt), iv: toB64(iv), ct: toB64(ct) };
+  // Enkripsi objek JSON dengan dua kode akses -> paket v2
+  //   codes = { lihat: '…', kelola: '…' }
+  // (bentuk lama: codes berupa string -> paket v1 satu kode, dipakai hanya untuk kompatibilitas)
+  async function encrypt(codes, obj) {
+    const salt = rand(16), iv = rand(12);
+    const plain = enc.encode(JSON.stringify(obj));
+    if (typeof codes === 'string') {
+      const key = await deriveKey(codes, salt, ITER);
+      const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
+      return { v: 1, iter: ITER, salt: toB64(salt), iv: toB64(iv), ct: toB64(ct) };
+    }
+    if (!codes || !codes.lihat || !codes.kelola) throw new Error('Kode lihat dan kode kelola harus diisi.');
+    const dataKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, dataKey, plain);
+    const kunci = {};
+    for (const role of ROLES) kunci[role] = await wrap(await deriveKey(codes[role], salt, ITER), dataKey);
+    return { v: 2, iter: ITER, salt: toB64(salt), kunci, iv: toB64(iv), ct: toB64(ct) };
   }
 
   async function decryptWithKey(key, pkg) {
@@ -42,30 +73,49 @@ window.PortalCrypto = (() => {
     return JSON.parse(dec.decode(plain));
   }
 
-  // Coba buka paket dengan kode akses. Mengembalikan {key, data} atau melempar error.
+  // Coba buka paket dengan kode akses. Mengembalikan {key, data, role} atau melempar error.
+  //   role: 'kelola' (boleh mengubah data) atau 'lihat' (hanya melihat portal)
   async function unlock(pass, pkg) {
-    const key = await deriveKey(pass, fromB64(pkg.salt), pkg.iter || ITER);
-    const data = await decryptWithKey(key, pkg);
-    return { key, data };
+    const kek = await deriveKey(pass, fromB64(pkg.salt), pkg.iter || ITER);
+    if (pkg.v === 2 && pkg.kunci) {
+      for (const role of ROLES) {
+        if (!pkg.kunci[role]) continue;
+        let key;
+        try { key = await unwrap(kek, pkg.kunci[role]); } catch { continue; }
+        const data = await decryptWithKey(key, pkg);
+        return { key, data, role };
+      }
+      throw new Error('Kode akses salah.');
+    }
+    // paket v1 (satu kode): kode tunggal dianggap kode kelola
+    const data = await decryptWithKey(kek, pkg);
+    return { key: kek, data, role: 'kelola' };
   }
 
-  // Kunci yang sudah diturunkan disimpan di browser (bukan kode aksesnya).
-  async function saveKey(key, remember) {
+  // Kunci data (bukan kode aksesnya) dan peran disimpan di browser.
+  async function saveKey(key, remember, role) {
     const raw = toB64(await crypto.subtle.exportKey('raw', key));
-    try { sessionStorage.setItem(STORE, raw); } catch {}
-    try { if (remember) localStorage.setItem(STORE, raw); else localStorage.removeItem(STORE); } catch {}
+    const r = ROLES.includes(role) ? role : 'lihat';
+    try { sessionStorage.setItem(STORE, raw); sessionStorage.setItem(STORE_ROLE, r); } catch {}
+    try {
+      if (remember) { localStorage.setItem(STORE, raw); localStorage.setItem(STORE_ROLE, r); }
+      else { localStorage.removeItem(STORE); localStorage.removeItem(STORE_ROLE); }
+    } catch {}
   }
   async function loadKey() {
     let raw = null;
     try { raw = sessionStorage.getItem(STORE) || localStorage.getItem(STORE); } catch {}
     if (!raw) return null;
-    try {
-      return await crypto.subtle.importKey('raw', fromB64(raw), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
-    } catch { return null; }
+    try { return await importRaw(fromB64(raw)); } catch { return null; }
+  }
+  function loadRole() {
+    let r = null;
+    try { r = sessionStorage.getItem(STORE_ROLE) || localStorage.getItem(STORE_ROLE); } catch {}
+    return ROLES.includes(r) ? r : 'lihat';
   }
   function clearKey() {
-    try { sessionStorage.removeItem(STORE); } catch {}
-    try { localStorage.removeItem(STORE); } catch {}
+    try { sessionStorage.removeItem(STORE); sessionStorage.removeItem(STORE_ROLE); } catch {}
+    try { localStorage.removeItem(STORE); localStorage.removeItem(STORE_ROLE); } catch {}
   }
 
   // Bentuk file data.enc.js dari paket terenkripsi.
@@ -77,5 +127,5 @@ window.PortalCrypto = (() => {
 
   const supported = !!(window.crypto && crypto.subtle && window.TextEncoder);
 
-  return { encrypt, unlock, decryptWithKey, saveKey, loadKey, clearKey, toFile, supported };
+  return { encrypt, unlock, decryptWithKey, saveKey, loadKey, loadRole, clearKey, toFile, supported };
 })();

@@ -93,15 +93,15 @@
 <body>
 <div class="page">
   <h1>Pengelola Portal</h1>
-  <p class="lead">Halaman ini untuk mengubah daftar aplikasi dan kode akses portal. Tidak ada yang tersimpan otomatis: hasilnya adalah file <code>data.enc.js</code> baru yang Anda unggah ke GitHub. Kembali ke <a href="index.html">halaman masuk</a>.</p>
+  <p class="lead">Halaman ini untuk mengubah atau menghapus daftar aplikasi dan mengganti kode akses portal. Hanya bisa dibuka dengan <strong>kode kelola</strong>; kode lihat tidak berlaku di sini. Tidak ada yang tersimpan otomatis: hasilnya adalah file <code>data.enc.js</code> baru yang Anda unggah ke GitHub. Kembali ke <a href="index.html">halaman masuk</a>.</p>
 
   <section id="s1">
     <h2><span class="step">1</span> Muat data yang ada</h2>
-    <p id="s1text">Masukkan kode akses portal yang berlaku sekarang untuk membuka daftar aplikasi yang sedang tayang.</p>
+    <p id="s1text">Masukkan <strong>kode kelola</strong> yang berlaku sekarang untuk membuka daftar aplikasi yang sedang tayang. Kode lihat (yang dibagikan ke pengguna) tidak bisa dipakai di sini.</p>
     <div class="row" id="loadRow">
-      <input type="password" id="curCode" placeholder="Kode akses saat ini" autocomplete="off">
+      <input type="password" id="curCode" placeholder="Kode kelola saat ini" autocomplete="off">
       <button class="btn primary" id="btnLoad" type="button">Buka</button>
-      <button class="btn" id="btnFresh" type="button">Mulai dari kosong</button>
+      <button class="btn" id="btnFresh" type="button" title="Kosongkan daftar aplikasi">Mulai dari kosong</button>
     </div>
     <div class="msg" id="msg1"></div>
   </section>
@@ -130,10 +130,12 @@
 
   <section id="s3" class="locked">
     <h2><span class="step">3</span> Kode akses dan buat file</h2>
-    <p>Kode inilah yang akan diminta di halaman masuk. Minimal 8 karakter; huruf besar dan kecil dibedakan. Boleh sama dengan kode lama kalau tidak ingin mengganti.</p>
+    <p>Ada dua kode. <strong>Kode lihat</strong> dibagikan ke pengguna: hanya bisa membuka portal. <strong>Kode kelola</strong> dipegang pengelola: membuka portal dan halaman ini untuk mengubah atau menghapus data. Keduanya harus berbeda; huruf besar dan kecil dibedakan. Biarkan seperti terisi kalau tidak ingin mengganti.</p>
     <div class="grid2">
-      <div><label class="f" for="newCode">Kode akses</label><input type="password" id="newCode" autocomplete="new-password"></div>
-      <div><label class="f" for="newCode2">Ulangi kode akses</label><input type="password" id="newCode2" autocomplete="new-password"></div>
+      <div><label class="f" for="newCode">Kode lihat (untuk pengguna)</label><input type="password" id="newCode" autocomplete="new-password"></div>
+      <div><label class="f" for="newCode2">Ulangi kode lihat</label><input type="password" id="newCode2" autocomplete="new-password"></div>
+      <div><label class="f" for="adminCode">Kode kelola (untuk pengelola, minimal 8 karakter)</label><input type="password" id="adminCode" autocomplete="new-password"></div>
+      <div><label class="f" for="adminCode2">Ulangi kode kelola</label><input type="password" id="adminCode2" autocomplete="new-password"></div>
     </div>
     <div class="row" style="margin-top:16px">
       <button class="btn primary big" id="btnBuild" type="button">Buat file data.enc.js</button>
@@ -144,7 +146,7 @@
       <ol class="steps">
         <li>Simpan file <code>data.enc.js</code> yang baru saja diunduh.</li>
         <li>Di GitHub, buka repository portal, klik <strong>Add file → Upload files</strong>, seret file itu (menggantikan yang lama), lalu <strong>Commit changes</strong>.</li>
-        <li>Tunggu sekitar satu menit; portal akan memakai daftar dan kode akses yang baru. Pengguna yang masih masuk dengan kode lama akan diminta memasukkan kode baru.</li>
+        <li>Tunggu sekitar satu menit; portal akan memakai daftar dan kode akses yang baru. Semua pengguna yang sedang masuk akan diminta memasukkan kode lagi.</li>
       </ol>
       <label class="f" for="outText">Jika unduhan tidak berjalan, salin isi di bawah ini ke file bernama <code>data.enc.js</code></label>
       <textarea id="outText" readonly spellcheck="false"></textarea>
@@ -160,7 +162,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const C = window.PortalCrypto;
-  const state = { config: { title: 'Portal Aplikasi', subtitle: '', logo: '', footer: '' }, apps: [], file: '' };
+  const state = { config: { title: 'Portal Aplikasi', subtitle: '', logo: '', footer: '' }, apps: [], file: '', unlocked: false };
 
   function msg(id, text, kind) {
     const m = $(id); m.textContent = text; m.className = 'msg show ' + kind;
@@ -194,19 +196,32 @@
     if (!pass) { msg('msg1', 'Masukkan kode akses saat ini.', 'err'); return; }
     $('btnLoad').disabled = true;
     try {
-      const { data } = await C.unlock(pass, window.PORTAL_DATA);
+      const { data, role } = await C.unlock(pass, window.PORTAL_DATA);
+      if (role !== 'kelola') {
+        msg('msg1', 'Kode ini hanya kode lihat. Untuk mengubah data portal, masukkan kode kelola.', 'err');
+        return;
+      }
       Object.assign(state.config, data.config || {});
       state.apps = Array.isArray(data.apps) ? data.apps.map(a => ({ name: a.name || '', url: a.url || '', category: a.category || '', desc: a.desc || '', icon: a.icon || '' })) : [];
       fillForm();
       msg('msg1', `Berhasil dibuka: ${state.apps.length} aplikasi dimuat.`, 'ok');
-      $('newCode').value = pass; $('newCode2').value = pass;
+      // kode lihat ikut tersimpan (terenkripsi) di dalam data, jadi bisa diisikan kembali; kode kelola = yang baru dipakai
+      const lihat = (data.kode && data.kode.lihat) || '';
+      $('newCode').value = lihat; $('newCode2').value = lihat;
+      $('adminCode').value = pass; $('adminCode2').value = pass;
+      if (!lihat) msg('msg1', `Berhasil dibuka: ${state.apps.length} aplikasi dimuat. File ini masih format lama satu kode; isi kode lihat di langkah 3.`, 'ok');
+      state.unlocked = true; $('btnFresh').disabled = false;
       unlockSections();
       $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch {
       msg('msg1', 'Kode akses salah.', 'err');
     } finally { $('btnLoad').disabled = false; }
   });
+  // "Mulai dari kosong" menghapus seluruh daftar: hanya setelah kode kelola diterima (atau belum ada data sama sekali)
+  if (window.PORTAL_DATA) $('btnFresh').disabled = true;
   $('btnFresh').addEventListener('click', () => {
+    if (window.PORTAL_DATA && !state.unlocked) { msg('msg1', 'Masukkan kode kelola dulu.', 'err'); return; }
+    if (state.apps.length && !confirm(`Kosongkan daftar (${state.apps.length} aplikasi)? Perubahan baru berlaku setelah file data.enc.js baru diunggah.`)) return;
     state.apps = [];
     fillForm();
     msg('msg1', 'Mulai dari kosong. Isi daftar aplikasi di langkah 2.', 'info');
@@ -261,7 +276,7 @@
   // ---------- 3. buat ----------
   $('showCode').addEventListener('change', (e) => {
     const t = e.target.checked ? 'text' : 'password';
-    $('newCode').type = t; $('newCode2').type = t; $('curCode').type = t;
+    $('newCode').type = t; $('newCode2').type = t; $('adminCode').type = t; $('adminCode2').type = t; $('curCode').type = t;
   });
   $('btnBuild').addEventListener('click', async () => {
     hideMsg('msg3'); $('out').classList.remove('show');
@@ -270,17 +285,21 @@
       name: String(a.name || '').trim(), url: String(a.url || '').trim(), category: String(a.category || '').trim(),
       desc: String(a.desc || '').trim(), icon: String(a.icon || '').trim(),
     })).filter(a => a.name);
-    const pass = $('newCode').value, pass2 = $('newCode2').value;
-    if (pass.length < 8) { msg('msg3', 'Kode akses minimal 8 karakter.', 'err'); $('newCode').focus(); return; }
-    if (pass !== pass2) { msg('msg3', 'Kode akses dan ulangannya tidak sama.', 'err'); $('newCode2').focus(); return; }
+    const lihat = $('newCode').value, lihat2 = $('newCode2').value;
+    const kelola = $('adminCode').value, kelola2 = $('adminCode2').value;
+    if (lihat.length < 4) { msg('msg3', 'Kode lihat minimal 4 karakter.', 'err'); $('newCode').focus(); return; }
+    if (lihat !== lihat2) { msg('msg3', 'Kode lihat dan ulangannya tidak sama.', 'err'); $('newCode2').focus(); return; }
+    if (kelola.length < 8) { msg('msg3', 'Kode kelola minimal 8 karakter.', 'err'); $('adminCode').focus(); return; }
+    if (kelola !== kelola2) { msg('msg3', 'Kode kelola dan ulangannya tidak sama.', 'err'); $('adminCode2').focus(); return; }
+    if (lihat.normalize('NFKC') === kelola.normalize('NFKC')) { msg('msg3', 'Kode lihat dan kode kelola harus berbeda.', 'err'); $('adminCode').focus(); return; }
     if (!apps.length) { msg('msg3', 'Daftar aplikasi masih kosong. Isi minimal satu aplikasi di langkah 2.', 'err'); return; }
     $('btnBuild').disabled = true;
     try {
-      const pkg = await C.encrypt(pass, { v: 1, config: state.config, apps });
+      const pkg = await C.encrypt({ lihat, kelola }, { v: 2, config: state.config, apps, kode: { lihat } });
       state.file = C.toFile(pkg);
       $('outText').value = state.file;
       download();
-      msg('msg3', `File data.enc.js dibuat: ${apps.length} aplikasi, dikunci dengan kode akses baru.`, 'ok');
+      msg('msg3', `File data.enc.js dibuat: ${apps.length} aplikasi, dikunci dengan kode lihat dan kode kelola.`, 'ok');
       $('out').classList.add('show');
     } catch {
       msg('msg3', 'Gagal membuat file. Coba lagi.', 'err');

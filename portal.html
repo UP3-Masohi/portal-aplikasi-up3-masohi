@@ -85,6 +85,7 @@
   }
   .btn:hover { border-color: var(--brand); color: var(--brand); }
   a.btn { text-decoration: none; margin-right: 8px; }
+  .btn[hidden] { display: none; }
   .btn svg { width: 16px; height: 16px; }
   @media (max-width: 480px) { .btn span { display: none; } .btn { padding: 0 11px; } }
   .mark {
@@ -212,6 +213,10 @@
         <p id="subtitle"></p>
       </div>
     </div>
+    <a class="btn" id="manage" href="admin.html" title="Ubah daftar aplikasi (hanya kode kelola)" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <span>Kelola</span>
+    </a>
     <a class="btn" href="index.html#beranda" title="Ke halaman depan">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
       <span>Beranda</span>
@@ -258,6 +263,8 @@
   } else {
     location.replace('index.html'); return;
   }
+  // Tombol "Kelola" hanya untuk yang masuk dengan kode kelola
+  if (C.loadRole() === 'kelola') document.getElementById('manage').hidden = false;
   window.PORTAL_CONFIG = portal.config || {};
   window.PORTAL_APPS = Array.isArray(portal.apps) ? portal.apps : [];
 

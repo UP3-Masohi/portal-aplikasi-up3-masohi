@@ -600,8 +600,8 @@
     if (!pass.trim()) { fail('Kode akses belum diisi.'); code.focus(); return; }
     btn.disabled = true; $('btnText').textContent = 'Membuka…';
     try {
-      const { key } = await C.unlock(pass, window.PORTAL_DATA);
-      await C.saveKey(key, $('remember').checked);
+      const { key, role } = await C.unlock(pass, window.PORTAL_DATA);
+      await C.saveKey(key, $('remember').checked, role);
       $('btnText').textContent = 'Berhasil';
       location.replace('portal.html');
     } catch {
