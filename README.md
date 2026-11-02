@@ -29,7 +29,7 @@ Kedua kode tidak dicantumkan di repository ini; tanyakan ke pengelola portal. Ke
 
 ## Logo aplikasi
 
-Kalau kolom ikon dikosongkan dan alamatnya terisi, portal mencoba mengambil logo dari situs aplikasi itu sendiri: ikon resolusi tinggi dari situsnya, lalu layanan favicon Google untuk situs publik, lalu `favicon.ico`. Sampai ketemu, yang tampil adalah inisial berwarna. Aplikasi intranet hanya mendapat logo saat dibuka dari jaringan kantor. Hasilnya diingat di browser masing-masing selama 7 hari. Isi kolom ikon dengan `inisial` untuk memaksa inisial, satu emoji, atau nama file di folder `logos/` (mis. `logos/sap.png`) untuk logo pilihan sendiri.
+Kalau kolom ikon dikosongkan dan alamatnya terisi, portal mencoba mengambil logo dari situs aplikasi itu sendiri: ikon resolusi tinggi dari situsnya, lalu layanan favicon Google untuk situs publik, lalu `favicon.ico`. Sampai ketemu, yang tampil adalah inisial berwarna. Aplikasi intranet hanya mendapat logo saat dibuka dari jaringan kantor. Hasilnya diingat di browser masing-masing selama 7 hari. Isi kolom ikon dengan `inisial` untuk memaksa inisial, satu emoji, atau nama file di folder `logos/` (mis. `logos/sap.png`) untuk logo pilihan sendiri. Di dialog tambah/ubah aplikasi di portal juga ada tombol **Unggah logo** dan **Tempel** (atau Ctrl+V / seret gambar ke dialog): gambar diperkecil ke 128 piksel dan disimpan di dalam data portal, jadi ikut tersimpan lewat tombol Simpan tanpa folder tambahan.
 
 ## Mengubah daftar aplikasi langsung di portal (cara cepat)
 

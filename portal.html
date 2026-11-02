@@ -251,6 +251,15 @@
   .editor .ok { display: none; margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 13px; font-weight: 500; }
   .editor .ok.show { display: block; }
   .linkish { border: 0; background: none; padding: 0; color: var(--brand); text-decoration: underline; cursor: pointer; font: inherit; font-size: inherit; }
+  .iconrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .iconrow .preview .icon { width: 56px; height: 56px; border-radius: 14px; font-size: 19px; }
+  .iconrow .preview .icon.emoji { font-size: 28px; }
+  .iconrow .preview .icon img { padding: 5px; }
+  .iconrow .preview .icon.img.small img { padding: 14px; }
+  .iconrow .btn { height: 34px; padding: 0 12px; font-size: 13px; }
+  .iconrow .note { font-size: 12.5px; color: var(--muted); flex-basis: 100%; }
+  .editor form.dragging { outline: 2px dashed var(--brand); outline-offset: -6px; }
+  .editor input[readonly] { color: var(--muted); }
   @media (max-width: 480px) { .editor .body { padding: 18px 16px; } .editor .actions .btn { flex: 1; justify-content: center; } .editor .actions .spacer { display: none; } }
 
   .toast {
@@ -331,6 +340,14 @@
     <label for="fIcon">Ikon (opsional)</label>
     <p class="hint" style="margin:0 0 5px">Kosongkan agar logo diambil otomatis dari situs aplikasi (inisial tampil dulu bila belum ketemu). Isi <code>inisial</code> untuk memaksa inisial, satu emoji, atau nama file di folder <code>logos/</code>.</p>
     <input id="fIcon" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="kosong = logo situs otomatis · inisial · emoji · logos/nama.png">
+    <div class="iconrow">
+      <div class="preview" id="iconPreview" aria-hidden="true"></div>
+      <button class="btn" id="btnUpload" type="button">Unggah logo</button>
+      <button class="btn" id="btnPaste" type="button" title="Tempel gambar dari papan klip (atau tekan Ctrl+V / Cmd+V di dialog ini)">Tempel</button>
+      <button class="btn danger" id="btnIconClear" type="button" hidden>Hapus logo</button>
+      <input id="fFile" type="file" accept="image/*" hidden>
+      <span class="note" id="iconNote">Gambar diperkecil ke 128 piksel dan disimpan bersama data portal; boleh juga seret gambar ke dialog ini.</span>
+    </div>
     <p class="err" id="fErr"></p>
     <div class="actions">
       <button class="btn danger" id="btnDelete" type="button">Hapus</button>
@@ -736,12 +753,51 @@
     render();
   }
   function showErr(msg) { const e = $('fErr'); e.textContent = msg; e.classList.add('show'); }
+
+  // --- logo unggahan/tempelan: diperkecil ke 128 px lalu disimpan sebagai data URI di kolom ikon ---
+  let dlgLogo = '';   // data URI logo yang sedang dipilih di dialog ('' = tidak ada)
+  function setDlgLogo(dataUri) {
+    dlgLogo = dataUri || '';
+    const f = $('fIcon');
+    if (dlgLogo) { f.value = ''; f.placeholder = 'Logo unggahan dipakai (' + Math.round(dlgLogo.length * 3 / 4 / 1024) + ' KB)'; f.readOnly = true; }
+    else { f.placeholder = 'kosong = logo situs otomatis · inisial · emoji · logos/nama.png'; f.readOnly = false; }
+    $('btnIconClear').hidden = !dlgLogo;
+    updateIconPreview();
+  }
+  function updateIconPreview() {
+    const app = { name: $('fName').value.trim() || 'Aplikasi', url: normalizeUrl($('fUrl').value), icon: dlgLogo || $('fIcon').value.trim() };
+    const p = $('iconPreview'); p.textContent = ''; p.append(iconNode(app));
+  }
+  async function shrinkImage(blob) {
+    if (!blob || !/^image\//.test(blob.type)) throw new Error('Berkas itu bukan gambar.');
+    if (blob.size > 15 * 1024 * 1024) throw new Error('Gambar terlalu besar (maksimal 15 MB).');
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('Gambar tidak bisa dibaca.')); i.src = url; });
+      const S = 128, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+      const ctx = cv.getContext('2d');
+      const r = Math.min(S / img.naturalWidth, S / img.naturalHeight), w = Math.round(img.naturalWidth * r), h = Math.round(img.naturalHeight * r);
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
+      // WebP lebih kecil; kalau browser tidak mendukung, PNG
+      let out = cv.toDataURL('image/webp', 0.86);
+      if (!out.startsWith('data:image/webp')) out = cv.toDataURL('image/png');
+      if (out.length > 60000) out = cv.toDataURL('image/jpeg', 0.8);
+      return out;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function useImage(blob) {
+    try { setDlgLogo(await shrinkImage(blob)); $('fErr').classList.remove('show'); }
+    catch (e) { showErr(e.message || 'Gambar tidak bisa dipakai.'); }
+  }
   function openEditor(idx) {
     edit.current = idx;
     const a = idx >= 0 ? window.PORTAL_APPS[idx] : { category: (state.tab !== 'all' && state.tab !== 'fav') ? state.tab : '' };
     $('dlgTitle').textContent = idx >= 0 ? 'Ubah aplikasi' : 'Tambah aplikasi';
     $('fName').value = a.name || ''; $('fUrl').value = a.url || ''; $('fCat').value = a.category || '';
-    $('fDesc').value = a.desc || ''; $('fIcon').value = a.icon || '';
+    $('fDesc').value = a.desc || '';
+    const ic = String(a.icon || '');
+    if (/^data:image\//i.test(ic)) { $('fIcon').value = ''; setDlgLogo(ic); } else { $('fIcon').value = ic; setDlgLogo(''); }
     $('btnDelete').hidden = idx < 0;
     $('fErr').classList.remove('show');
     const dl = $('catList'); dl.textContent = '';
@@ -846,6 +902,30 @@
     $('btnCancel').addEventListener('click', exitEdit);
     $('btnAdd').addEventListener('click', () => openEditor(-1));
     $('btnDlgCancel').addEventListener('click', () => $('dlgApp').close());
+    $('btnUpload').addEventListener('click', () => $('fFile').click());
+    $('fFile').addEventListener('change', () => { const f = $('fFile').files[0]; if (f) useImage(f); $('fFile').value = ''; });
+    $('btnIconClear').addEventListener('click', () => { setDlgLogo(''); $('fIcon').focus(); });
+    $('btnPaste').addEventListener('click', async () => {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('nodukung');
+        const items = await navigator.clipboard.read();
+        for (const it of items) { const t = it.types.find(x => x.startsWith('image/')); if (t) { await useImage(await it.getType(t)); return; } }
+        showErr('Tidak ada gambar di papan klip. Salin gambarnya dulu (klik kanan → Copy image), lalu tekan Tempel.');
+      } catch { showErr('Browser tidak mengizinkan membaca papan klip lewat tombol. Tekan Ctrl+V (Windows) atau Cmd+V (Mac) di dialog ini.'); }
+    });
+    $('dlgApp').addEventListener('paste', (e) => {
+      const it = [...(e.clipboardData ? e.clipboardData.items : [])].find(x => x.type.startsWith('image/'));
+      if (it) { e.preventDefault(); useImage(it.getAsFile()); }
+    });
+    const formApp = $('formApp');
+    formApp.addEventListener('dragover', (e) => { e.preventDefault(); formApp.classList.add('dragging'); });
+    formApp.addEventListener('dragleave', () => formApp.classList.remove('dragging'));
+    formApp.addEventListener('drop', (e) => {
+      e.preventDefault(); formApp.classList.remove('dragging');
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) useImage(f);
+    });
+    for (const id of ['fName', 'fUrl', 'fIcon']) $(id).addEventListener('input', updateIconPreview);
     $('formApp').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = $('fName').value.trim();
@@ -856,7 +936,7 @@
         if (/\s/.test(url)) { showErr('Alamat tidak boleh mengandung spasi. Contoh: https://aplikasi.pln.co.id'); $('fUrl').focus(); return; }
         try { new URL(url); } catch { showErr('Alamat tidak valid. Contoh: https://aplikasi.pln.co.id'); $('fUrl').focus(); return; }
       }
-      const rec = { name, url, category: $('fCat').value.trim(), desc: $('fDesc').value.trim(), icon: $('fIcon').value.trim(), _dirty: true };
+      const rec = { name, url, category: $('fCat').value.trim(), desc: $('fDesc').value.trim(), icon: dlgLogo || $('fIcon').value.trim(), _dirty: true };
       const adding = edit.current < 0;
       if (adding) window.PORTAL_APPS.push(rec); else window.PORTAL_APPS[edit.current] = rec;
       $('dlgApp').close();
