@@ -73,9 +73,23 @@ window.PortalCrypto = (() => {
     return JSON.parse(dec.decode(plain));
   }
 
+  // Variasi ketikan yang sering terjadi di ponsel: spasi di ujung, tanda pisah panjang (– —),
+  // huruf besar/kecil otomatis. Dicoba berurutan, yang persis seperti diketik lebih dulu.
+  function variants(pass) {
+    const p = String(pass), t = p.trim(), d = t.replace(/[\u2010-\u2015\u2212]/g, '-');
+    return [...new Set([p, t, d, d.toUpperCase(), d.toLowerCase()])];
+  }
+
   // Coba buka paket dengan kode akses. Mengembalikan {key, data, role} atau melempar error.
   //   role: 'kelola' (boleh mengubah data) atau 'lihat' (hanya melihat portal)
   async function unlock(pass, pkg) {
+    let last = null;
+    for (const v of variants(pass)) {
+      try { const r = await unlockExact(v, pkg); r.pass = v; return r; } catch (e) { last = e; }
+    }
+    throw last || new Error('Kode akses salah.');
+  }
+  async function unlockExact(pass, pkg) {
     const kek = await deriveKey(pass, fromB64(pkg.salt), pkg.iter || ITER);
     if (pkg.v === 2 && pkg.kunci) {
       for (const role of ROLES) {

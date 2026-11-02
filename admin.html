@@ -99,11 +99,13 @@
     <h2><span class="step">1</span> Muat data yang ada</h2>
     <p id="s1text">Masukkan <strong>kode kelola</strong> yang berlaku sekarang untuk membuka daftar aplikasi yang sedang tayang. Kode lihat (yang dibagikan ke pengguna) tidak bisa dipakai di sini.</p>
     <div class="row" id="loadRow">
-      <input type="password" id="curCode" placeholder="Kode kelola saat ini" autocomplete="off">
+      <input type="password" id="curCode" placeholder="Kode kelola saat ini" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
       <button class="btn primary" id="btnLoad" type="button">Buka</button>
+      <label style="font-size:13.5px;color:var(--muted);display:flex;align-items:center;gap:6px"><input type="checkbox" id="showCur"> tampilkan</label>
       <button class="btn" id="btnFresh" type="button" title="Kosongkan daftar aplikasi">Mulai dari kosong</button>
     </div>
     <div class="msg" id="msg1"></div>
+    <p class="hint" id="ver"></p>
   </section>
 
   <section id="s2" class="locked">
@@ -132,10 +134,10 @@
     <h2><span class="step">3</span> Kode akses dan buat file</h2>
     <p>Ada dua kode. <strong>Kode lihat</strong> dibagikan ke pengguna: hanya bisa membuka portal. <strong>Kode kelola</strong> dipegang pengelola: membuka portal dan halaman ini untuk mengubah atau menghapus data. Keduanya harus berbeda; huruf besar dan kecil dibedakan. Biarkan seperti terisi kalau tidak ingin mengganti.</p>
     <div class="grid2">
-      <div><label class="f" for="newCode">Kode lihat (untuk pengguna)</label><input type="password" id="newCode" autocomplete="new-password"></div>
-      <div><label class="f" for="newCode2">Ulangi kode lihat</label><input type="password" id="newCode2" autocomplete="new-password"></div>
-      <div><label class="f" for="adminCode">Kode kelola (untuk pengelola, minimal 8 karakter)</label><input type="password" id="adminCode" autocomplete="new-password"></div>
-      <div><label class="f" for="adminCode2">Ulangi kode kelola</label><input type="password" id="adminCode2" autocomplete="new-password"></div>
+      <div><label class="f" for="newCode">Kode lihat (untuk pengguna)</label><input type="password" id="newCode" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div><label class="f" for="newCode2">Ulangi kode lihat</label><input type="password" id="newCode2" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div><label class="f" for="adminCode">Kode kelola (untuk pengelola, minimal 8 karakter)</label><input type="password" id="adminCode" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div><label class="f" for="adminCode2">Ulangi kode kelola</label><input type="password" id="adminCode2" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
     </div>
     <div class="row" style="margin-top:16px">
       <button class="btn primary big" id="btnBuild" type="button">Buat file data.enc.js</button>
@@ -155,7 +157,7 @@
   </section>
 </div>
 
-<script src="crypto.js?v=2"></script>
+<script src="crypto.js?v=3"></script>
 <script src="data.enc.js"></script>
 <script>
 (() => {
@@ -190,6 +192,15 @@
     $('curCode').disabled = true; $('btnLoad').disabled = true;
   }
 
+  // Keterangan versi untuk memudahkan pengecekan bila kode ditolak
+  function showVer() {
+    const d = window.PORTAL_DATA;
+    $('ver').textContent = 'Pengunci: ' + (C && C.loadRole ? 'v2 (dua kode)' : 'v1 (lama)') +
+      ' · Data: ' + (d ? ('v' + (d.v || 1) + (d.kunci ? ' (dua kode)' : ' (satu kode)')) : 'tidak ada');
+  }
+  showVer();
+  $('showCur').addEventListener('change', (e) => { $('curCode').type = e.target.checked ? 'text' : 'password'; });
+
   // Ambil data.enc.js terbaru langsung dari server (melewati cache browser), supaya yang dimuat
   // selalu data yang sedang tayang, bukan salinan lama yang masih tersimpan di browser.
   const dataFresh = (async () => {
@@ -200,7 +211,7 @@
       const txt = await res.text();
       const pkg = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
       if (pkg && pkg.ct && pkg.iv && pkg.salt) {
-        window.PORTAL_DATA = pkg;
+        window.PORTAL_DATA = pkg; showVer();
         if ($('curCode').disabled) { $('curCode').disabled = false; $('btnLoad').disabled = false; $('s1text').textContent = 'Masukkan kode kelola yang berlaku sekarang untuk membuka daftar aplikasi yang sedang tayang.'; }
       }
     } catch {}
@@ -213,7 +224,7 @@
     $('btnLoad').disabled = true;
     await dataFresh;
     try {
-      const { data, role } = await C.unlock(pass, window.PORTAL_DATA);
+      const { data, role, pass: passOk } = await C.unlock(pass, window.PORTAL_DATA);
       if (role !== 'kelola') {
         msg('msg1', 'Kode ini hanya kode lihat. Untuk mengubah data portal, masukkan kode kelola.', 'err');
         return;
@@ -225,13 +236,13 @@
       // kode lihat ikut tersimpan (terenkripsi) di dalam data, jadi bisa diisikan kembali; kode kelola = yang baru dipakai
       const lihat = (data.kode && data.kode.lihat) || '';
       $('newCode').value = lihat; $('newCode2').value = lihat;
-      $('adminCode').value = pass; $('adminCode2').value = pass;
+      $('adminCode').value = passOk || pass; $('adminCode2').value = passOk || pass;
       if (!lihat) msg('msg1', `Berhasil dibuka: ${state.apps.length} aplikasi dimuat. File ini masih format lama satu kode; isi kode lihat di langkah 3.`, 'ok');
       state.unlocked = true; $('btnFresh').disabled = false;
       unlockSections();
       $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch {
-      msg('msg1', 'Kode kelola salah. Huruf besar dan kecil dibedakan. Kalau data.enc.js baru saja diganti, muat ulang halaman ini (Ctrl+Shift+R atau Cmd+Shift+R) lalu coba lagi.', 'err');
+      msg('msg1', `Kode kelola salah (yang diketik: ${pass.length} karakter). Centang “tampilkan” untuk memeriksa ketikan. Kalau data.enc.js baru saja diganti, muat ulang halaman ini (Ctrl+Shift+R atau Cmd+Shift+R) lalu coba lagi.`, 'err');
     } finally { $('btnLoad').disabled = false; }
   });
   // "Mulai dari kosong" menghapus seluruh daftar: hanya setelah kode kelola diterima (atau belum ada data sama sekali)
