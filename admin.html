@@ -155,7 +155,7 @@
   </section>
 </div>
 
-<script src="crypto.js"></script>
+<script src="crypto.js?v=2"></script>
 <script src="data.enc.js"></script>
 <script>
 (() => {
@@ -190,11 +190,28 @@
     $('curCode').disabled = true; $('btnLoad').disabled = true;
   }
 
+  // Ambil data.enc.js terbaru langsung dari server (melewati cache browser), supaya yang dimuat
+  // selalu data yang sedang tayang, bukan salinan lama yang masih tersimpan di browser.
+  const dataFresh = (async () => {
+    if (location.protocol === 'file:') return;
+    try {
+      const res = await fetch('data.enc.js', { cache: 'no-store' });
+      if (!res.ok) return;
+      const txt = await res.text();
+      const pkg = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
+      if (pkg && pkg.ct && pkg.iv && pkg.salt) {
+        window.PORTAL_DATA = pkg;
+        if ($('curCode').disabled) { $('curCode').disabled = false; $('btnLoad').disabled = false; $('s1text').textContent = 'Masukkan kode kelola yang berlaku sekarang untuk membuka daftar aplikasi yang sedang tayang.'; }
+      }
+    } catch {}
+  })();
+
   // ---------- 1. muat ----------
   $('btnLoad').addEventListener('click', async () => {
     const pass = $('curCode').value;
-    if (!pass) { msg('msg1', 'Masukkan kode akses saat ini.', 'err'); return; }
+    if (!pass) { msg('msg1', 'Masukkan kode kelola saat ini.', 'err'); return; }
     $('btnLoad').disabled = true;
+    await dataFresh;
     try {
       const { data, role } = await C.unlock(pass, window.PORTAL_DATA);
       if (role !== 'kelola') {
@@ -214,7 +231,7 @@
       unlockSections();
       $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch {
-      msg('msg1', 'Kode akses salah.', 'err');
+      msg('msg1', 'Kode kelola salah. Huruf besar dan kecil dibedakan. Kalau data.enc.js baru saja diganti, muat ulang halaman ini (Ctrl+Shift+R atau Cmd+Shift+R) lalu coba lagi.', 'err');
     } finally { $('btnLoad').disabled = false; }
   });
   // "Mulai dari kosong" menghapus seluruh daftar: hanya setelah kode kelola diterima (atau belum ada data sama sekali)
