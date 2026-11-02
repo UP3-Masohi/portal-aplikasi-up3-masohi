@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pengelola Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #F3F5F8; --surface: #FFFFFF; --ink: #172033; --muted: #5F6B7C;
+    --line: #E1E6ED; --line-strong: #C9D1DB; --brand: #0F4C81; --brand-soft: #E4EEF7;
+    --brand-ink: #FFFFFF; --danger: #B42318; --danger-soft: #FEE4E2; --ok: #067647; --ok-soft: #DCFAE6; --tile: #F7F9FB;
+    --font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F141B; --surface: #171E27; --ink: #EDF1F6; --muted: #98A4B3; --line: #263040; --line-strong: #364457;
+      --brand: #5B9BD5; --brand-soft: #1B2D40; --brand-ink: #0B1220; --danger: #F97066; --danger-soft: #3A1A18;
+      --ok: #75E0A7; --ok-soft: #15301F; --tile: #1F2834;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F141B; --surface: #171E27; --ink: #EDF1F6; --muted: #98A4B3; --line: #263040; --line-strong: #364457;
+    --brand: #5B9BD5; --brand-soft: #1B2D40; --brand-ink: #0B1220; --danger: #F97066; --danger-soft: #3A1A18;
+    --ok: #75E0A7; --ok-soft: #15301F; --tile: #1F2834;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 24px 20px 80px; }
+  h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .lead { margin: 0 0 24px; color: var(--muted); }
+  .lead a { color: var(--brand); }
+
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; margin-bottom: 16px; }
+  section h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  section h2 .step { width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-size: 13px; display: grid; place-items: center; flex: none; }
+  section > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  input[type="text"], input[type="password"], input[type="url"], textarea {
+    padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--bg); width: 100%;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .row input { flex: 1; min-width: 200px; }
+  label.f { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 5px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--brand); }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.big { height: 46px; padding: 0 20px; font-size: 15px; }
+
+  .msg { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; }
+  .msg.show { display: block; }
+  .msg.ok { background: var(--ok-soft); color: var(--ok); }
+  .msg.err { background: var(--danger-soft); color: var(--danger); }
+  .msg.info { background: var(--brand-soft); color: var(--brand); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 820px; font-size: 13.5px; }
+  th { text-align: left; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 10px 8px; background: var(--tile); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 5px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  td input { padding: 7px 9px; border-radius: 8px; }
+  td.n { color: var(--muted); font-size: 12px; text-align: right; width: 34px; padding-right: 8px; }
+  td.x { width: 40px; }
+  td.x button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+  td.x button:hover { color: var(--danger); border-color: var(--danger); }
+  td.x svg { width: 15px; height: 15px; }
+  .count { font-size: 13px; color: var(--muted); }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; background: var(--tile); padding: 1px 5px; border-radius: 5px; }
+  .out { margin-top: 14px; display: none; }
+  .out.show { display: block; }
+  .out textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 120px; resize: vertical; }
+  ol.steps { margin: 10px 0 0; padding-left: 20px; font-size: 14px; }
+  ol.steps li { margin-bottom: 4px; }
+  .locked { opacity: .5; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Pengelola Portal</h1>
+  <p class="lead">Halaman ini untuk mengubah daftar aplikasi dan kode akses portal. Tidak ada yang tersimpan otomatis: hasilnya adalah file <code>data.enc.js</code> baru yang Anda unggah ke GitHub. Kembali ke <a href="index.html">halaman masuk</a>.</p>
+
+  <section id="s1">
+    <h2><span class="step">1</span> Muat data yang ada</h2>
+    <p id="s1text">Masukkan kode akses portal yang berlaku sekarang untuk membuka daftar aplikasi yang sedang tayang.</p>
+    <div class="row" id="loadRow">
+      <input type="password" id="curCode" placeholder="Kode akses saat ini" autocomplete="off">
+      <button class="btn primary" id="btnLoad" type="button">Buka</button>
+      <button class="btn" id="btnFresh" type="button">Mulai dari kosong</button>
+    </div>
+    <div class="msg" id="msg1"></div>
+  </section>
+
+  <section id="s2" class="locked">
+    <h2><span class="step">2</span> Daftar aplikasi dan pengaturan</h2>
+    <p>Kategori yang sama akan dikelompokkan dalam satu tab. Ikon boleh dikosongkan (inisial otomatis), satu emoji, atau nama file di folder <code>logos/</code> seperti <code>logos/sap.png</code>.</p>
+    <div class="grid2">
+      <div><label class="f" for="cTitle">Judul portal</label><input type="text" id="cTitle"></div>
+      <div><label class="f" for="cSub">Keterangan di bawah judul</label><input type="text" id="cSub"></div>
+      <div><label class="f" for="cLogo">Logo unit (kosongkan untuk memakai logo AKSI bawaan; atau mis. logos/logo-unit.png)</label><input type="text" id="cLogo"></div>
+      <div><label class="f" for="cFoot">Teks kecil di bagian bawah (opsional)</label><input type="text" id="cFoot"></div>
+    </div>
+    <label class="f">Aplikasi <span class="count" id="count"></span></label>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th style="width:22%">Nama</th><th style="width:30%">Alamat (URL)</th><th style="width:14%">Kategori</th><th style="width:18%">Keterangan</th><th style="width:14%">Ikon</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnAddRow" type="button">+ Tambah aplikasi</button>
+      <button class="btn" id="btnSort" type="button">Urutkan A–Z</button>
+    </div>
+  </section>
+
+  <section id="s3" class="locked">
+    <h2><span class="step">3</span> Kode akses dan buat file</h2>
+    <p>Kode inilah yang akan diminta di halaman masuk. Minimal 8 karakter; huruf besar dan kecil dibedakan. Boleh sama dengan kode lama kalau tidak ingin mengganti.</p>
+    <div class="grid2">
+      <div><label class="f" for="newCode">Kode akses</label><input type="password" id="newCode" autocomplete="new-password"></div>
+      <div><label class="f" for="newCode2">Ulangi kode akses</label><input type="password" id="newCode2" autocomplete="new-password"></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn primary big" id="btnBuild" type="button">Buat file data.enc.js</button>
+      <label style="font-size:13.5px;color:var(--muted);display:flex;align-items:center;gap:6px"><input type="checkbox" id="showCode"> tampilkan kode</label>
+    </div>
+    <div class="msg" id="msg3"></div>
+    <div class="out" id="out">
+      <ol class="steps">
+        <li>Simpan file <code>data.enc.js</code> yang baru saja diunduh.</li>
+        <li>Di GitHub, buka repository portal, klik <strong>Add file → Upload files</strong>, seret file itu (menggantikan yang lama), lalu <strong>Commit changes</strong>.</li>
+        <li>Tunggu sekitar satu menit; portal akan memakai daftar dan kode akses yang baru. Pengguna yang masih masuk dengan kode lama akan diminta memasukkan kode baru.</li>
+      </ol>
+      <label class="f" for="outText">Jika unduhan tidak berjalan, salin isi di bawah ini ke file bernama <code>data.enc.js</code></label>
+      <textarea id="outText" readonly spellcheck="false"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn" id="btnCopy" type="button">Salin</button><button class="btn" id="btnDownloadAgain" type="button">Unduh lagi</button></div>
+    </div>
+  </section>
+</div>
+
+<script src="crypto.js"></script>
+<script src="data.enc.js"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const C = window.PortalCrypto;
+  const state = { config: { title: 'Portal Aplikasi', subtitle: '', logo: '', footer: '' }, apps: [], file: '' };
+
+  function msg(id, text, kind) {
+    const m = $(id); m.textContent = text; m.className = 'msg show ' + kind;
+  }
+  function hideMsg(id) { $(id).className = 'msg'; }
+  function unlockSections() { $('s2').classList.remove('locked'); $('s3').classList.remove('locked'); }
+  function el(tag, attrs = {}, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else if (k === 'html') n.innerHTML = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids) if (c != null) n.append(c);
+    return n;
+  }
+  const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+
+  if (!C || !C.supported) {
+    msg('msg1', 'Browser ini tidak mendukung enkripsi. Gunakan browser yang lebih baru.', 'err');
+    $('loadRow').classList.add('locked');
+  }
+  if (!window.PORTAL_DATA) {
+    $('s1text').textContent = 'Belum ada file data.enc.js di folder ini, jadi tidak ada yang bisa dimuat. Mulai dari kosong.';
+    $('curCode').disabled = true; $('btnLoad').disabled = true;
+  }
+
+  // ---------- 1. muat ----------
+  $('btnLoad').addEventListener('click', async () => {
+    const pass = $('curCode').value;
+    if (!pass) { msg('msg1', 'Masukkan kode akses saat ini.', 'err'); return; }
+    $('btnLoad').disabled = true;
+    try {
+      const { data } = await C.unlock(pass, window.PORTAL_DATA);
+      Object.assign(state.config, data.config || {});
+      state.apps = Array.isArray(data.apps) ? data.apps.map(a => ({ name: a.name || '', url: a.url || '', category: a.category || '', desc: a.desc || '', icon: a.icon || '' })) : [];
+      fillForm();
+      msg('msg1', `Berhasil dibuka: ${state.apps.length} aplikasi dimuat.`, 'ok');
+      $('newCode').value = pass; $('newCode2').value = pass;
+      unlockSections();
+      $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch {
+      msg('msg1', 'Kode akses salah.', 'err');
+    } finally { $('btnLoad').disabled = false; }
+  });
+  $('btnFresh').addEventListener('click', () => {
+    state.apps = [];
+    fillForm();
+    msg('msg1', 'Mulai dari kosong. Isi daftar aplikasi di langkah 2.', 'info');
+    unlockSections();
+    $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ---------- 2. form ----------
+  function fillForm() {
+    $('cTitle').value = state.config.title || '';
+    $('cSub').value = state.config.subtitle || '';
+    $('cLogo').value = state.config.logo || '';
+    $('cFoot').value = state.config.footer || '';
+    renderRows();
+  }
+  function renderRows() {
+    const tb = $('rows'); tb.textContent = '';
+    state.apps.forEach((a, i) => {
+      const cell = (key, type, ph) => el('td', {}, el('input', {
+        type, value: a[key], placeholder: ph, 'aria-label': ph,
+        oninput: (e) => { state.apps[i][key] = e.target.value; }
+      }));
+      tb.append(el('tr', {},
+        el('td', { class: 'n', text: String(i + 1) }),
+        cell('name', 'text', 'Nama'),
+        cell('url', 'text', 'https://…'),
+        cell('category', 'text', 'Kategori'),
+        cell('desc', 'text', 'Keterangan'),
+        cell('icon', 'text', 'Ikon'),
+        el('td', { class: 'x' }, el('button', { type: 'button', html: TRASH, 'aria-label': 'Hapus baris', onclick: () => { state.apps.splice(i, 1); renderRows(); } }))));
+    });
+    $('count').textContent = `(${state.apps.length})`;
+  }
+  $('btnAddRow').addEventListener('click', () => {
+    state.apps.push({ name: '', url: '', category: '', desc: '', icon: '' });
+    renderRows();
+    const last = $('rows').lastElementChild; if (last) { last.querySelector('input').focus(); last.scrollIntoView({ block: 'nearest' }); }
+  });
+  $('btnSort').addEventListener('click', () => {
+    state.apps.sort((a, b) => String(a.name).localeCompare(String(b.name), 'id', { sensitivity: 'base' }));
+    renderRows();
+  });
+  function readConfig() {
+    state.config = {
+      title: $('cTitle').value.trim() || 'Portal Aplikasi',
+      subtitle: $('cSub').value.trim(),
+      logo: $('cLogo').value.trim(),
+      footer: $('cFoot').value.trim(),
+    };
+  }
+
+  // ---------- 3. buat ----------
+  $('showCode').addEventListener('change', (e) => {
+    const t = e.target.checked ? 'text' : 'password';
+    $('newCode').type = t; $('newCode2').type = t; $('curCode').type = t;
+  });
+  $('btnBuild').addEventListener('click', async () => {
+    hideMsg('msg3'); $('out').classList.remove('show');
+    readConfig();
+    const apps = state.apps.map(a => ({
+      name: String(a.name || '').trim(), url: String(a.url || '').trim(), category: String(a.category || '').trim(),
+      desc: String(a.desc || '').trim(), icon: String(a.icon || '').trim(),
+    })).filter(a => a.name);
+    const pass = $('newCode').value, pass2 = $('newCode2').value;
+    if (pass.length < 8) { msg('msg3', 'Kode akses minimal 8 karakter.', 'err'); $('newCode').focus(); return; }
+    if (pass !== pass2) { msg('msg3', 'Kode akses dan ulangannya tidak sama.', 'err'); $('newCode2').focus(); return; }
+    if (!apps.length) { msg('msg3', 'Daftar aplikasi masih kosong. Isi minimal satu aplikasi di langkah 2.', 'err'); return; }
+    $('btnBuild').disabled = true;
+    try {
+      const pkg = await C.encrypt(pass, { v: 1, config: state.config, apps });
+      state.file = C.toFile(pkg);
+      $('outText').value = state.file;
+      download();
+      msg('msg3', `File data.enc.js dibuat: ${apps.length} aplikasi, dikunci dengan kode akses baru.`, 'ok');
+      $('out').classList.add('show');
+    } catch {
+      msg('msg3', 'Gagal membuat file. Coba lagi.', 'err');
+    } finally { $('btnBuild').disabled = false; }
+  });
+  function download() {
+    const blob = new Blob([state.file], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: 'data.enc.js' });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  $('btnDownloadAgain').addEventListener('click', () => { if (state.file) download(); });
+  $('btnCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(state.file); msg('msg3', 'Isi file disalin.', 'ok'); }
+    catch { $('outText').select(); msg('msg3', 'Tekan Ctrl+C / Cmd+C untuk menyalin.', 'info'); }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Berkas sistem macOS / volume FAT
+._*
+.DS_Store
+.Spotlight-V100/
+.fseventsd/
+.Trashes/
