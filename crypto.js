@@ -68,6 +68,15 @@ window.PortalCrypto = (() => {
     return { v: 2, iter: ITER, salt: toB64(salt), kunci, iv: toB64(iv), ct: toB64(ct) };
   }
 
+  // Enkripsi ulang isi dengan kunci data yang sudah terbuka: salt dan bungkus kunci (kedua kode)
+  // dipertahankan, hanya iv dan ct yang baru. Dipakai mode edit di portal.html, jadi pengelola
+  // tidak perlu mengetik kode lagi untuk menyimpan perubahan daftar.
+  async function reencrypt(key, pkg, obj) {
+    const iv = rand(12);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
+    return Object.assign({}, pkg, { iv: toB64(iv), ct: toB64(ct) });
+  }
+
   async function decryptWithKey(key, pkg) {
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(pkg.iv) }, key, fromB64(pkg.ct));
     return JSON.parse(dec.decode(plain));
@@ -141,5 +150,5 @@ window.PortalCrypto = (() => {
 
   const supported = !!(window.crypto && crypto.subtle && window.TextEncoder);
 
-  return { encrypt, unlock, decryptWithKey, saveKey, loadKey, loadRole, clearKey, toFile, supported };
+  return { encrypt, reencrypt, unlock, decryptWithKey, saveKey, loadKey, loadRole, clearKey, toFile, supported };
 })();

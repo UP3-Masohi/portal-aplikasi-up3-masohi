@@ -5,8 +5,8 @@ Portal aplikasi statis yang bisa ditayangkan di GitHub Pages, dengan halaman mas
 | File | Fungsi |
 |---|---|
 | `index.html` | Landing page: pembuka interaktif (logo AKSI, pilar 50-15-5), lalu formulir kode akses setelah tombol **Masuk ke portal** |
-| `portal.html` | Portal aplikasi — hanya terbuka setelah kode akses benar; tombol **Beranda** kembali ke halaman depan tanpa keluar, **Keluar** menghapus kunci dari perangkat. Yang masuk dengan kode kelola juga melihat tombol **Kelola** |
-| `admin.html` | Alat pengelola: ubah atau hapus daftar aplikasi dan ganti kedua kode akses, lalu buat `data.enc.js` baru. Hanya terbuka dengan **kode kelola** |
+| `portal.html` | Portal aplikasi — hanya terbuka setelah kode akses benar; tombol **Beranda** kembali ke halaman depan tanpa keluar, **Keluar** menghapus kunci dari perangkat. Yang masuk dengan kode kelola juga melihat tombol **Edit** untuk mengubah daftar langsung di portal |
+| `admin.html` | Alat pengelola lengkap: judul, logo, kedua kode akses, dan daftar aplikasi dalam bentuk tabel, lalu buat `data.enc.js` baru. Hanya terbuka dengan **kode kelola** |
 | `data.enc.js` | Daftar aplikasi dan judul portal, terenkripsi |
 | `crypto.js` | Pengunci data (tidak perlu diubah) |
 | `logos/` | Folder opsional untuk logo aplikasi (salinan logo AKSI juga ada di sini) |
@@ -16,7 +16,7 @@ Portal aplikasi statis yang bisa ditayangkan di GitHub Pages, dengan halaman mas
 | Kode | Siapa yang memegang | Bisa apa |
 |---|---|---|
 | **Kode lihat** | semua pengguna portal | membuka `portal.html` dan melihat daftar aplikasi |
-| **Kode kelola** | pengelola portal | semua yang bisa kode lihat, ditambah membuka `admin.html` untuk mengubah, menghapus, dan mengganti kode |
+| **Kode kelola** | pengelola portal | semua yang bisa kode lihat, ditambah tombol **Edit** di portal dan `admin.html` untuk mengubah, menghapus, dan mengganti kode |
 
 Kedua kode tidak dicantumkan di repository ini; tanyakan ke pengelola portal. Keduanya bisa diganti kapan saja lewat `admin.html`.
 
@@ -27,7 +27,16 @@ Kedua kode tidak dicantumkan di repository ini; tanyakan ke pengelola portal. Ke
 3. Buka **Settings → Pages**. Pada *Build and deployment* pilih **Source: Deploy from a branch**, **Branch: `main`**, folder **`/ (root)`**, lalu **Save**.
 4. Tunggu 1–2 menit. Portal tayang di `https://NAMA-AKUN.github.io/portal-up3-masohi/`.
 
-## Mengubah daftar aplikasi atau kode akses
+## Mengubah daftar aplikasi langsung di portal (cara cepat)
+
+1. Masuk ke portal dengan **kode kelola**, klik **Edit** di kanan atas.
+2. Klik ikon aplikasi untuk mengubah nama, alamat, kategori, keterangan, atau ikon, atau untuk **Hapus**. Klik **+ Tambah** untuk aplikasi baru.
+3. Klik **Simpan**. File `data.enc.js` baru terunduh; tidak perlu mengetik kode lagi.
+4. Klik **Buka halaman unggah**, seret file itu ke GitHub (menggantikan yang lama), lalu **Commit changes**. Sekitar satu menit kemudian semua pengguna melihat daftar yang baru; yang sedang masuk tidak perlu masuk ulang.
+
+Judul portal, logo, dan penggantian kode akses tetap lewat `admin.html` di bawah ini.
+
+## Mengubah judul, logo, kode akses, atau daftar lewat tabel
 
 1. Buka `admin.html` (di situs yang sudah tayang, atau langsung dari file di komputer).
 2. **Langkah 1:** masukkan **kode kelola** yang berlaku, klik **Buka**. Daftar aplikasi yang sedang tayang akan dimuat. Kode lihat ditolak di sini.
