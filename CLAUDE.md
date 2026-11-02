@@ -35,7 +35,7 @@ Situs statis (tanpa server/backend) yang menampilkan semua aplikasi dan situs ke
 ```bash
 python3 -m http.server 8765          # buka http://localhost:8765/index.html
 ```
-Alur yang harus tetap jalan: pembuka → Masuk → formulir → kode benar → `portal.html` (34 ikon) → Beranda → pembuka ("Buka portal") → Keluar → pembuka dengan pesan. Back browser dari formulir harus kembali ke pembuka. Kode akses awal tercantum di README (harus diganti sebelum dibagikan). Pengujian otomatis sebelumnya memakai Playwright (Chromium) terhadap server lokal.
+Alur yang harus tetap jalan: pembuka → Masuk → formulir → kode benar → `portal.html` (34 ikon) → Beranda → pembuka ("Buka portal") → Keluar → pembuka dengan pesan. Back browser dari formulir harus kembali ke pembuka. Kode akses tidak dicantumkan di repository; minta ke pengelola portal. Pengujian otomatis sebelumnya memakai Playwright (Chromium) terhadap server lokal.
 
 ## Deploy
 

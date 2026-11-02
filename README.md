@@ -11,7 +11,7 @@ Portal aplikasi statis yang bisa ditayangkan di GitHub Pages, dengan halaman mas
 | `crypto.js` | Pengunci data (tidak perlu diubah) |
 | `logos/` | Folder opsional untuk logo aplikasi (salinan logo AKSI juga ada di sini) |
 
-**Kode akses awal: `masohi2026`** — segera ganti lewat `admin.html` sebelum dibagikan.
+**Kode akses** tidak dicantumkan di repository ini; tanyakan ke pengelola portal. Kode yang sedang berlaku bisa diganti kapan saja lewat `admin.html`.
 
 ## Cara deploy ke GitHub Pages
 
