@@ -58,14 +58,14 @@ window.PortalCrypto = (() => {
     if (typeof codes === 'string') {
       const key = await deriveKey(codes, salt, ITER);
       const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
-      return { v: 1, iter: ITER, salt: toB64(salt), iv: toB64(iv), ct: toB64(ct) };
+      return { v: 1, iter: ITER, salt: toB64(salt), iv: toB64(iv), ct: toB64(ct), saved: now() };
     }
     if (!codes || !codes.lihat || !codes.kelola) throw new Error('Kode lihat dan kode kelola harus diisi.');
     const dataKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
     const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, dataKey, plain);
     const kunci = {};
     for (const role of ROLES) kunci[role] = await wrap(await deriveKey(codes[role], salt, ITER), dataKey);
-    return { v: 2, iter: ITER, salt: toB64(salt), kunci, iv: toB64(iv), ct: toB64(ct) };
+    return { v: 2, iter: ITER, salt: toB64(salt), kunci, iv: toB64(iv), ct: toB64(ct), saved: now() };
   }
 
   // Enkripsi ulang isi dengan kunci data yang sudah terbuka: salt dan bungkus kunci (kedua kode)
@@ -74,7 +74,21 @@ window.PortalCrypto = (() => {
   async function reencrypt(key, pkg, obj) {
     const iv = rand(12);
     const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(obj)));
-    return Object.assign({}, pkg, { iv: toB64(iv), ct: toB64(ct) });
+    return Object.assign({}, pkg, { iv: toB64(iv), ct: toB64(ct), saved: now() });
+  }
+  // Cap waktu paket: portal memilih paket terbaru di antara cache browser, server, dan salinan lokal.
+  function now() { return new Date().toISOString(); }
+
+  // Teks kecil (mis. token GitHub) disimpan terenkripsi dengan kunci data; hasil base64 iv+ct.
+  async function sealText(key, text) {
+    const iv = rand(12);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(String(text))));
+    const out = new Uint8Array(12 + ct.length); out.set(iv, 0); out.set(ct, 12);
+    return toB64(out);
+  }
+  async function openText(key, b64) {
+    const u = fromB64(b64);
+    return dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(0, 12) }, key, u.slice(12)));
   }
 
   async function decryptWithKey(key, pkg) {
@@ -150,5 +164,5 @@ window.PortalCrypto = (() => {
 
   const supported = !!(window.crypto && crypto.subtle && window.TextEncoder);
 
-  return { encrypt, reencrypt, unlock, decryptWithKey, saveKey, loadKey, loadRole, clearKey, toFile, supported };
+  return { encrypt, reencrypt, unlock, decryptWithKey, saveKey, loadKey, loadRole, clearKey, sealText, openText, toFile, supported };
 })();

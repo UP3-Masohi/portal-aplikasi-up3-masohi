@@ -244,6 +244,11 @@
   .editor code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; background: var(--tile); padding: 1px 5px; border-radius: 5px; }
   .editor details { margin-top: 14px; font-size: 13px; color: var(--muted); }
   .editor textarea { margin-top: 8px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; min-height: 110px; resize: vertical; }
+  .editor label.check { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 13.5px; margin-top: 12px; }
+  .editor label.check input { width: auto; margin: 0; }
+  .editor .ok { display: none; margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 13px; font-weight: 500; }
+  .editor .ok.show { display: block; }
+  .linkish { border: 0; background: none; padding: 0; color: var(--brand); text-decoration: underline; cursor: pointer; font: inherit; font-size: inherit; }
   @media (max-width: 480px) { .editor .body { padding: 18px 16px; } .editor .actions .btn { flex: 1; justify-content: center; } .editor .actions .spacer { display: none; } }
 
   .toast {
@@ -286,6 +291,10 @@
   <div class="editbar" id="editbar" role="region" aria-label="Mode edit">
     <div class="info"><strong>Mode edit</strong><span id="editInfo"></span></div>
     <button class="btn" id="btnAdd" type="button">+ Tambah</button>
+    <button class="btn" id="btnToken" type="button" title="Atur simpan langsung ke GitHub">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      <span id="tokenLabel">GitHub</span>
+    </button>
     <button class="btn" id="btnCancel" type="button">Batal</button>
     <button class="btn primary" id="btnSave" type="button" disabled>Simpan</button>
   </div>
@@ -332,7 +341,8 @@
 <dialog class="editor" id="dlgSave" aria-labelledby="dlgSaveTitle">
   <div class="body">
     <h2 id="dlgSaveTitle">File data.enc.js sudah dibuat</h2>
-    <p><strong>Perubahan belum tayang.</strong> Perubahan baru tersimpan di file yang diunduh; situs (termasuk di browser ini setelah dimuat ulang) tetap memakai daftar lama sampai file itu diunggah ke GitHub menggantikan yang lama.</p>
+    <p class="err" id="saveErr"></p>
+    <p><strong>Perubahan belum tayang.</strong> Perubahan baru tersimpan di file yang diunduh; situs (termasuk di browser ini setelah dimuat ulang) tetap memakai daftar lama sampai file itu diunggah ke GitHub menggantikan yang lama. Supaya lain kali tidak perlu unduh dan unggah, atur <button class="linkish" id="btnSetupToken" type="button">simpan langsung ke GitHub</button>.</p>
     <ol>
       <li>Simpan file <code>data.enc.js</code> yang baru saja diunduh.</li>
       <li>Klik <strong>Buka halaman unggah</strong>, seret file itu ke sana, lalu klik <strong>Commit changes</strong>.</li>
@@ -352,10 +362,38 @@
   </div>
 </dialog>
 
+<dialog class="editor" id="dlgToken" aria-labelledby="dlgTokenTitle">
+  <form class="body" id="formToken" method="dialog" novalidate>
+    <h2 id="dlgTokenTitle">Simpan langsung ke GitHub</h2>
+    <p>Dengan token GitHub, tombol <strong>Simpan</strong> langsung memperbarui <code>data.enc.js</code> di repository; tidak perlu unduh dan unggah. Status di browser ini: <strong id="tokenStatus">belum diatur</strong>.</p>
+    <details>
+      <summary>Cara membuat token (sekali saja, sekitar dua menit)</summary>
+      <ol>
+        <li>Masuk ke GitHub dengan akun yang punya hak tulis ke repository portal.</li>
+        <li>Buka <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+        <li>Isi nama (mis. “Portal UP3 Masohi”) dan masa berlaku. Pada <strong>Repository access</strong> pilih <em>Only select repositories</em>, lalu pilih repository portal.</li>
+        <li>Pada <strong>Permissions → Repository permissions</strong>, atur <strong>Contents</strong> menjadi <em>Read and write</em>. Yang lain biarkan.</li>
+        <li>Klik <strong>Generate token</strong>, salin token yang muncul (hanya ditampilkan sekali), lalu tempel di bawah.</li>
+      </ol>
+    </details>
+    <label for="fToken">Token</label>
+    <input id="fToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
+    <label class="check"><input type="checkbox" id="fTokenRemember"> Ingat di perangkat ini (hanya untuk perangkat pribadi)</label>
+    <p class="hint">Token disimpan terenkripsi di browser ini saja dan hanya dikirim ke GitHub. Siapa pun yang bisa membuka portal di browser ini dengan kode kelola dapat memakainya, jadi jangan aktifkan di komputer bersama. Token bisa dicabut kapan saja dari pengaturan GitHub.</p>
+    <p class="err" id="tokenErr"></p>
+    <div class="actions">
+      <button class="btn danger" id="btnTokenForget" type="button">Lupakan token</button>
+      <span class="spacer"></span>
+      <button class="btn" id="btnTokenCancel" type="button">Batal</button>
+      <button class="btn primary" id="btnTokenOk" type="submit">Uji dan simpan</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- Daftar aplikasi tersimpan terenkripsi di data.enc.js; dibuka dengan kunci dari halaman masuk -->
-<script src="crypto.js?v=4"></script>
+<script src="crypto.js?v=5"></script>
 <script src="data.enc.js"></script>
 <script>
 (async () => {
@@ -364,24 +402,44 @@
   // ---------- buka data ----------
   const C = window.PortalCrypto;
   let portal = null;
-  // GitHub Pages menyimpan cache 10 menit. Ambil data.enc.js langsung dari server supaya
-  // daftar yang baru diunggah pengelola segera terlihat; kalau gagal, pakai yang dari <script>.
+  // Data bisa datang dari tiga sumber; yang dipakai adalah yang cap waktunya ("saved") paling baru:
+  //   1. <script src="data.enc.js"> — bisa salinan lama dari cache browser (GitHub Pages: 10 menit)
+  //   2. ambilan segar dari server (melewati cache)
+  //   3. salinan yang terakhir disimpan langsung ke GitHub dari perangkat ini, sambil menunggu
+  //      GitHub Pages selesai menayangkannya (sekitar satu menit)
+  const LOCAL_DATA = 'portal-data-terbaru';
+  const ts = (p) => (p && p.saved && Date.parse(p.saved)) || 0;
+  const isPkg = (p) => !!(p && p.ct && p.iv && p.salt);
+  const candidates = [];
+  if (isPkg(window.PORTAL_DATA)) candidates.push(window.PORTAL_DATA);
   if (location.protocol !== 'file:') {
     try {
       const res = await fetch('data.enc.js', { cache: 'no-store' });
       if (res.ok) {
         const txt = await res.text();
         const pkg = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
-        if (pkg && pkg.ct && pkg.iv && pkg.salt) window.PORTAL_DATA = pkg;
+        if (isPkg(pkg)) candidates.push(pkg);
       }
     } catch {}
   }
-  if (C && C.supported && window.PORTAL_DATA) {
+  try {
+    const raw = localStorage.getItem(LOCAL_DATA);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (isPkg(p) && ts(p) > Math.max(0, ...candidates.map(ts))) candidates.push(p);
+      else localStorage.removeItem(LOCAL_DATA);   // server sudah menyusul: salinan lokal tidak perlu lagi
+    }
+  } catch {}
+  candidates.sort((a, b) => ts(b) - ts(a));
+  if (C && C.supported && candidates.length) {
     let hadKey = false;
-    try {
-      const key = await C.loadKey();
-      if (key) { hadKey = true; portal = await C.decryptWithKey(key, window.PORTAL_DATA); }
-    } catch { portal = null; }
+    const key = await C.loadKey();
+    if (key) {
+      hadKey = true;
+      for (const p of candidates) {
+        try { portal = await C.decryptWithKey(key, p); window.PORTAL_DATA = p; break; } catch {}
+      }
+    }
     if (!portal) { C.clearKey(); location.replace(hadKey ? 'index.html#kode-berubah' : 'index.html'); return; }
   } else {
     location.replace('index.html'); return;
@@ -581,9 +639,13 @@
   // Pengelola mengubah daftar langsung di sini. "Simpan" mengenkripsi ulang data dengan kunci yang
   // sudah terbuka (salt dan bungkus kedua kode dipertahankan) dan mengunduh data.enc.js baru,
   // yang kemudian diunggah ke GitHub. Situs statis tidak bisa menulis ke servernya sendiri.
-  const REPO_UPLOAD_URL = 'https://github.com/UP3-Masohi/portal-aplikasi-up3-masohi/upload/main';
+  const GH = { owner: 'UP3-Masohi', repo: 'portal-aplikasi-up3-masohi', branch: 'main', path: 'data.enc.js' };
+  const GH_API = `https://api.github.com/repos/${GH.owner}/${GH.repo}`;
+  const REPO_UPLOAD_URL = `https://github.com/${GH.owner}/${GH.repo}/upload/${GH.branch}`;
+  const TOKEN_KEY = 'portal-token';
+  const timeFmt = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jayapura' });
   const PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-  const edit = { on: false, original: '', dirty: false, current: -1, file: '', unuploaded: false };
+  const edit = { on: false, original: '', dirty: false, current: -1, file: '', unuploaded: false, savedAt: null, hasToken: false };
   const canEdit = C.loadRole() === 'kelola';
   const clean = (k, v) => (typeof k === 'string' && k.startsWith('_')) ? undefined : v;   // abaikan penanda internal
   const snapshot = () => JSON.stringify(window.PORTAL_APPS, clean);
@@ -592,8 +654,11 @@
     const info = $('editInfo'); info.textContent = '';
     if (edit.dirty) info.append(el('span', { class: 'dirty', text: 'Ada perubahan yang belum disimpan. ' }));
     else if (edit.unuploaded) info.append(el('span', { class: 'dirty', text: 'File data.enc.js sudah dibuat tetapi belum diunggah ke GitHub; situs masih memakai daftar lama sampai file itu diunggah. ' }), el('a', { href: REPO_UPLOAD_URL, target: '_blank', rel: 'noopener noreferrer', text: 'Buka halaman unggah' }), '. ');
-    else info.append(INFO_IDLE);
+    else if (edit.savedAt) info.append(`Tersimpan ke GitHub pukul ${timeFmt.format(edit.savedAt).replace(':', '.')} WIT; tayang untuk semua pengguna dalam sekitar satu menit. `);
+    else info.append(INFO_IDLE, edit.hasToken ? 'Simpan langsung ke GitHub aktif. ' : 'Simpan menghasilkan file untuk diunggah; atur simpan langsung lewat tombol GitHub. ');
     info.append('Judul, logo, dan kode akses diatur di ', el('a', { href: 'admin.html', text: 'admin.html' }), '.');
+    $('tokenLabel').textContent = edit.hasToken ? 'GitHub: aktif' : 'GitHub';
+    $('tokenStatus').textContent = edit.hasToken ? 'aktif' : 'belum diatur';
   }
   function setDirty() { edit.dirty = snapshot() !== edit.original; $('btnSave').disabled = !edit.dirty; updateInfo(); }
   function enterEdit() {
@@ -632,9 +697,92 @@
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
+  // --- token GitHub: disimpan terenkripsi dengan kunci data, hanya di browser ini ---
+  async function loadToken() {
+    let raw = null;
+    try { raw = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY); } catch {}
+    if (!raw) return null;
+    try { return await C.openText(await C.loadKey(), raw); } catch { return null; }
+  }
+  async function saveToken(token, remember) {
+    const sealed = await C.sealText(await C.loadKey(), token);
+    try { sessionStorage.setItem(TOKEN_KEY, sealed); } catch {}
+    try { if (remember) localStorage.setItem(TOKEN_KEY, sealed); else localStorage.removeItem(TOKEN_KEY); } catch {}
+  }
+  function clearToken() {
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
+    try { localStorage.removeItem(TOKEN_KEY); } catch {}
+  }
+  async function gh(method, url, token, body) {
+    const headers = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    if (body) headers['Content-Type'] = 'application/json';
+    const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
+    let data = null; try { data = await res.json(); } catch {}
+    return { ok: res.ok, status: res.status, data };
+  }
+  function ghError(r) {
+    if (r.status === 401) return 'Token ditolak (tidak valid atau sudah kedaluwarsa).';
+    if (r.status === 403) return 'Token tidak punya izin menulis ke repository ini. Pastikan izin Contents: Read and write.';
+    if (r.status === 404) return 'Repository atau file tidak ditemukan dengan token ini. Pastikan token diberi akses ke repository portal.';
+    return `GitHub menolak permintaan (kode ${r.status}${r.data && r.data.message ? ': ' + r.data.message : ''}).`;
+  }
+  function b64(text) {
+    const u = new TextEncoder().encode(text); let s = '';
+    for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  // Uji token: harus bisa membaca repository dan punya hak push
+  async function testToken(token) {
+    const r = await gh('GET', GH_API, token);
+    if (!r.ok) throw new Error(ghError(r));
+    if (r.data && r.data.permissions && r.data.permissions.push === false) throw new Error('Token hanya bisa membaca. Atur izin Contents menjadi Read and write.');
+  }
+  // Tulis data.enc.js ke repository (GitHub Contents API); ulang sekali bila sha berubah di tengah jalan
+  async function pushToGitHub(token, file) {
+    const body = { message: 'Perbarui daftar aplikasi lewat portal', content: b64(file), branch: GH.branch };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const cur = await gh('GET', `${GH_API}/contents/${GH.path}?ref=${GH.branch}&t=${Date.now()}`, token);
+      if (cur.status === 401 || cur.status === 403) throw new Error(ghError(cur));
+      if (cur.ok && cur.data && cur.data.sha) body.sha = cur.data.sha; else delete body.sha;
+      const put = await gh('PUT', `${GH_API}/contents/${GH.path}`, token, body);
+      if (put.ok) return put.data;
+      if (put.status === 409 && attempt === 0) continue;
+      throw new Error(ghError(put));
+    }
+  }
+  function openTokenDialog() {
+    $('fToken').value = ''; $('tokenErr').classList.remove('show');
+    $('btnTokenForget').hidden = !edit.hasToken;
+    try { $('fTokenRemember').checked = !!localStorage.getItem(TOKEN_KEY); } catch {}
+    $('dlgToken').showModal();
+  }
+
   if (canEdit) {
     $('manage').hidden = false;
     $('lnkUpload').href = REPO_UPLOAD_URL;
+    loadToken().then(t => { edit.hasToken = !!t; if (edit.on) updateInfo(); });
+    $('btnToken').addEventListener('click', openTokenDialog);
+    $('btnSetupToken').addEventListener('click', () => { $('dlgSave').close(); openTokenDialog(); });
+    $('btnTokenCancel').addEventListener('click', () => $('dlgToken').close());
+    $('btnTokenForget').addEventListener('click', () => {
+      clearToken(); edit.hasToken = false; updateInfo(); $('dlgToken').close(); toast('Token dilupakan. Simpan kembali menghasilkan file untuk diunggah.');
+    });
+    $('formToken').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = $('fToken').value.trim();
+      const errEl = $('tokenErr');
+      if (!token) { errEl.textContent = 'Tempel token dulu.'; errEl.classList.add('show'); $('fToken').focus(); return; }
+      $('btnTokenOk').disabled = true; $('btnTokenOk').textContent = 'Menguji…';
+      try {
+        await testToken(token);
+        await saveToken(token, $('fTokenRemember').checked);
+        edit.hasToken = true; updateInfo();
+        $('dlgToken').close();
+        toast('Token diterima. Simpan kini langsung ke GitHub.');
+      } catch (err) {
+        errEl.textContent = err.message || 'Gagal menghubungi GitHub.'; errEl.classList.add('show');
+      } finally { $('btnTokenOk').disabled = false; $('btnTokenOk').textContent = 'Uji dan simpan'; }
+    });
     $('manage').addEventListener('click', () => edit.on ? exitEdit() : enterEdit());
     $('btnCancel').addEventListener('click', exitEdit);
     $('btnAdd').addEventListener('click', () => openEditor(-1));
@@ -678,10 +826,28 @@
         const pkg = await C.reencrypt(key, window.PORTAL_DATA, payload);
         window.PORTAL_DATA = pkg; portal = payload; window.PORTAL_APPS = apps; portal.apps = apps;
         edit.file = C.toFile(pkg); $('outText').value = edit.file;
-        download();
-        edit.unuploaded = true;
-        loadApps(); edit.original = snapshot(); setDirty(); render();
-        $('dlgSave').showModal();
+        loadApps(); edit.original = snapshot();
+        const token = await loadToken();
+        let pushed = false, failMsg = '';
+        if (token) {
+          $('btnSave').textContent = 'Menyimpan…';
+          try { await pushToGitHub(token, edit.file); pushed = true; }
+          catch (err) { failMsg = err.message || 'Gagal menghubungi GitHub.'; }
+          $('btnSave').textContent = 'Simpan';
+        }
+        if (pushed) {
+          // simpan salinan lokal: dipakai saat halaman dimuat ulang sebelum GitHub Pages selesai menayangkan
+          try { localStorage.setItem(LOCAL_DATA, JSON.stringify(pkg)); } catch {}
+          edit.unuploaded = false; edit.savedAt = new Date();
+          setDirty(); render();
+          toast('Tersimpan ke GitHub. Tayang untuk semua pengguna dalam sekitar satu menit.');
+        } else {
+          download();
+          edit.unuploaded = true; edit.savedAt = null;
+          setDirty(); render();
+          const se = $('saveErr'); se.textContent = failMsg ? 'Simpan langsung ke GitHub gagal: ' + failMsg + ' File diunduh sebagai gantinya.' : ''; se.classList.toggle('show', !!failMsg);
+          $('dlgSave').showModal();
+        }
       } catch {
         toast('Gagal membuat file. Muat ulang halaman lalu coba lagi.');
         $('btnSave').disabled = false;
@@ -713,7 +879,7 @@
     };
     show(config.logo || DEFAULT_LOGO, config.logo ? DEFAULT_LOGO : null);
   }
-  $('logout').addEventListener('click', () => { C.clearKey(); location.replace('index.html#keluar'); });
+  $('logout').addEventListener('click', () => { C.clearKey(); try { sessionStorage.removeItem(TOKEN_KEY); } catch {} location.replace('index.html#keluar'); });
   loadFavs();
   loadApps();
   render();

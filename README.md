@@ -31,10 +31,21 @@ Kedua kode tidak dicantumkan di repository ini; tanyakan ke pengelola portal. Ke
 
 1. Masuk ke portal dengan **kode kelola**, klik **Edit** di kanan atas.
 2. Klik ikon aplikasi untuk mengubah nama, alamat, kategori, keterangan, atau ikon, atau untuk **Hapus**. Klik **+ Tambah** untuk aplikasi baru.
-3. Klik **Simpan**. File `data.enc.js` baru terunduh; tidak perlu mengetik kode lagi.
-4. Klik **Buka halaman unggah**, seret file itu ke GitHub (menggantikan yang lama), lalu **Commit changes**. Sekitar satu menit kemudian semua pengguna melihat daftar yang baru; yang sedang masuk tidak perlu masuk ulang.
+3. Klik **Simpan**.
+   - **Jika simpan langsung ke GitHub sudah diatur** (lihat di bawah): perubahan langsung ditulis ke repository dan tayang untuk semua pengguna dalam sekitar satu menit. Di browser Anda daftar baru langsung terlihat.
+   - **Jika belum:** file `data.enc.js` baru terunduh. Klik **Buka halaman unggah**, seret file itu ke GitHub (menggantikan yang lama), lalu **Commit changes**. Sebelum diunggah, situs masih memakai daftar lama.
 
-Judul portal, logo, dan penggantian kode akses tetap lewat `admin.html` di bawah ini.
+Pengguna yang sedang masuk tidak perlu masuk ulang setelah daftar berubah. Judul portal, logo, dan penggantian kode akses tetap lewat `admin.html`.
+
+### Mengaktifkan simpan langsung ke GitHub (sekali per perangkat pengelola)
+
+1. Di GitHub, buka **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Beri nama (mis. “Portal UP3 Masohi”), pilih masa berlaku, dan pada **Repository access** pilih *Only select repositories* → repository portal.
+3. Pada **Permissions → Repository permissions**, atur **Contents** menjadi *Read and write*. Biarkan yang lain.
+4. Klik **Generate token**, salin tokennya (hanya tampil sekali).
+5. Di portal, masuk dengan kode kelola → **Edit** → tombol **GitHub** → tempel token → **Uji dan simpan**. Centang “Ingat di perangkat ini” hanya pada perangkat pribadi.
+
+Token disimpan terenkripsi di browser itu saja dan hanya dikirim ke GitHub. Siapa pun yang bisa membuka portal di browser itu dengan kode kelola dapat memakainya, jadi jangan aktifkan di komputer bersama. Token bisa dicabut kapan saja dari pengaturan GitHub, dan tombol **Lupakan token** menghapusnya dari browser.
 
 ## Mengubah judul, logo, kode akses, atau daftar lewat tabel
 
