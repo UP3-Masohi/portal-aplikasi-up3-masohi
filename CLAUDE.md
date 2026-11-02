@@ -29,6 +29,8 @@ Situs statis (tanpa server/backend) yang menampilkan semua aplikasi dan situs ke
 - Animasi harus mati di `prefers-reduced-motion: reduce`; tata letak responsif sampai ~360px.
 - Data dari `data.enc.js` dan isian pengguna dirender dengan `textContent` (bukan `innerHTML`).
 - Jam dan sapaan selalu zona `Asia/Jayapura` (WIT).
+- GitHub Pages menyimpan cache 10 menit. Setiap kali `crypto.js` diubah, naikkan angka di `<script src="crypto.js?v=N">` pada ketiga halaman agar tidak bertemu `data.enc.js` versi lain dari cache. `admin.html` selalu mengambil `data.enc.js` segar lewat `fetch(..., {cache: "no-store"})`.
+- `unlock` menoleransi variasi ketikan (spasi ujung, tanda pisah panjang, huruf besar/kecil) dan mengembalikan `pass` yang cocok.
 
 ## Cara menguji
 
