@@ -4,3 +4,6 @@
 .Spotlight-V100/
 .fseventsd/
 .Trashes/
+
+# Konfigurasi lokal Claude Code
+.claude/
